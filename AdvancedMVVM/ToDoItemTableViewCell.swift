@@ -21,6 +21,16 @@ class ToDoItemTableViewCell: UITableViewCell {
     
     func configure(withViewModel viewModel: ToDoItemPresentable) -> (Void) {
         indexLabel.text = viewModel.id
-        toDoTitleLabel.text = viewModel.textValue
+
+        let attributedString: NSMutableAttributedString = NSMutableAttributedString(string: viewModel.textValue ?? "")
+
+        if viewModel.isDone! {
+            let range = NSMakeRange(0, attributedString.length)
+            attributedString.addAttribute(NSAttributedString.Key.strikethroughColor, value: UIColor.lightGray, range: range)
+            attributedString.addAttribute(NSAttributedString.Key.strikethroughStyle, value: 1, range: range)
+            attributedString.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.lightGray, range: range)
+        }
+
+        toDoTitleLabel.attributedText = attributedString
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 protocol TodoMenuItemViewPresentable {
-    var title: String? { get }
+    var title: String? { get set }
     var backColor: String? { get }
 }
 
@@ -60,7 +60,7 @@ protocol ToDoItemPresentable {
 class ToDoItemViewModel: ToDoItemPresentable {
     var id: String? = "0"
     var textValue: String?
-    var isDone: Bool?
+    var isDone: Bool? = false
     var menuItems: [TodoMenuItemViewPresentable]? = []
     weak var parent: TodoViewDelegate?
     
@@ -74,7 +74,7 @@ class ToDoItemViewModel: ToDoItemPresentable {
         removeMenuItem.backColor = "ff0000"
         
         let doneMenuItem = DoneMenuItemViewModel(parentViewModel: self)
-        doneMenuItem.title = "Done"
+        doneMenuItem.title = isDone! ? "Undone" : "Done"
         doneMenuItem.backColor = "008000"
         
         menuItems?.append(contentsOf: [removeMenuItem, doneMenuItem])
@@ -147,6 +147,21 @@ extension ToDoViewModel: TodoViewDelegate {
     }
     
     func onToDoDone(for id: String) {
-        debugPrint("Todo item done with id: \(id)")
+        guard let index = items.index(where : { $0.id! == id }) else {
+            return
+        }
+        var todoItem = items[index]
+        todoItem.isDone! = !todoItem.isDone!
+        if var doneMenuItem = todoItem.menuItems?.filter { (todoMenuItem) -> Bool in
+            todoMenuItem is DoneMenuItemViewModel
+        }.first {
+            doneMenuItem.title = todoItem.isDone! ? "Undone" : "Done"
+        }
+
+        items.sort { <#ToDoItemPresentable#>, <#ToDoItemPresentable#> in
+            return $0.isDone!
+        }
+
+        todoView?.updateTodoItem(at: index)
     }
 }

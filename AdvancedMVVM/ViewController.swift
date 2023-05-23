@@ -10,6 +10,7 @@ import UIKit
 protocol TodoView: AnyObject {
     func insertToDoItem() -> ()
     func removeTodoItem(at index: Int) -> ()
+    func updateTodoItem(at index: Int) -> ()
 }
 
 class ViewController: UIViewController {
@@ -106,6 +107,14 @@ extension ViewController: TodoView {
             self.itemsTableView.beginUpdates()
             self.itemsTableView.insertRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
             self.itemsTableView.endUpdates()
+        }
+    }
+
+    func updateTodoItem(at index: Int) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.itemsTableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
+            self.viewModel?.todoView?.updateTodoItem(at: index)
         }
     }
 }
