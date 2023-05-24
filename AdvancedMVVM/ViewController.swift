@@ -11,6 +11,7 @@ protocol TodoView: AnyObject {
     func insertToDoItem() -> ()
     func removeTodoItem(at index: Int) -> ()
     func updateTodoItem(at index: Int) -> ()
+    func reloadItems() -> ()
 }
 
 class ViewController: UIViewController {
@@ -115,6 +116,13 @@ extension ViewController: TodoView {
             guard let self = self else { return }
             self.itemsTableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
             self.viewModel?.todoView?.updateTodoItem(at: index)
+        }
+    }
+
+    func reloadItems() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.itemsTableView.reloadData()
         }
     }
 }

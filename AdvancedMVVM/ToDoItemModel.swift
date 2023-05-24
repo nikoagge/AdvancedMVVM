@@ -158,10 +158,18 @@ extension ToDoViewModel: TodoViewDelegate {
             doneMenuItem.title = todoItem.isDone! ? "Undone" : "Done"
         }
 
-        items.sort { <#ToDoItemPresentable#>, <#ToDoItemPresentable#> in
-            return $0.isDone!
-        }
+        items.sorted(by: {
+            if !($0.isDone ?? false) && !($1.isDone ?? false) {
+                return ($0.id ?? "") < ($1.id ?? "")
+            }
 
-        todoView?.updateTodoItem(at: index)
+            if ($0.isDone ?? false) && ($1.isDone ?? false) {
+                return ($0.id ?? "") < ($1.id ?? "")
+            }
+
+            return !(($0.isDone ?? false) && ($1.isDone ?? false))
+        })
+
+        todoView?.reloadItems()
     }
 }
