@@ -1,0 +1,6 @@
+framework module Pods_AdvancedMVVM {
+  umbrella header "Pods-AdvancedMVVM-umbrella.h"
+
+  export *
+  module * { export * }
+}

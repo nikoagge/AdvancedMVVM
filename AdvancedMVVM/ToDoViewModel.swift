@@ -5,7 +5,7 @@
 //  Created by Nikos Aggelidis on 16/5/23.
 //
 
-import Foundation
+import RxSwift
 
 protocol TodoMenuItemViewPresentable {
     var title: String? { get set }
@@ -108,14 +108,14 @@ protocol TodoViewPresentable {
 class ToDoViewModel: TodoViewPresentable {
     weak var todoView: TodoView?
     var newToDoItem: String?
-    var items: [ToDoItemPresentable] = []
+    var items: Variable<[ToDoItemPresentable]> = Variable([])
     
     init(todoView: TodoView) {
         self.todoView = todoView
         let item1 = ToDoItemViewModel(id: "1", textValue: "Washing Clothes", parentViewModel: self)
         let item2 = ToDoItemViewModel(id: "2", textValue: "Buy Groceries", parentViewModel: self)
         let item3 = ToDoItemViewModel(id: "3", textValue: "Wash car", parentViewModel: self)
-        items.append(contentsOf: [item1, item2, item3])
+        items.value.append(contentsOf: [item1, item2, item3])
     }
 }
 
@@ -128,9 +128,9 @@ extension ToDoViewModel: TodoViewDelegate {
         }
         debugPrint("New value received: \(newValue)")
         
-        let newItemIndex = items.count + 1
+        let newItemIndex = items.value.count + 1
         let newItem = ToDoItemViewModel(id: "\(newItemIndex)", textValue: newValue, parentViewModel: self)
-        items.append(newItem)
+        items.value.append(newItem)
         self.todoView?.insertToDoItem()
         
         newToDoItem = ""
@@ -139,18 +139,18 @@ extension ToDoViewModel: TodoViewDelegate {
     }
     
     func onTodoDelete(for id: String) {
-        guard let index = items.index(where : { $0.id! == id }) else {
+        guard let index = items.value.index(where : { $0.id! == id }) else {
             return
         }
-        items.remove(at: index)
+        items.value.remove(at: index)
         self.todoView?.removeTodoItem(at: index)
     }
     
     func onToDoDone(for id: String) {
-        guard let index = items.index(where : { $0.id! == id }) else {
+        guard let index = items.value.index(where : { $0.id! == id }) else {
             return
         }
-        var todoItem = items[index]
+        var todoItem = items.value[index]
         todoItem.isDone! = !todoItem.isDone!
         if var doneMenuItem = todoItem.menuItems?.filter { (todoMenuItem) -> Bool in
             todoMenuItem is DoneMenuItemViewModel
@@ -158,7 +158,7 @@ extension ToDoViewModel: TodoViewDelegate {
             doneMenuItem.title = todoItem.isDone! ? "Undone" : "Done"
         }
 
-        items.sorted(by: {
+        items.value.sorted(by: {
             if !($0.isDone ?? false) && !($1.isDone ?? false) {
                 return ($0.id ?? "") < ($1.id ?? "")
             }

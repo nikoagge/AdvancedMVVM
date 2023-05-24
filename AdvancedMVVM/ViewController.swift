@@ -6,6 +6,8 @@
 //
 
 import UIKit
+import RxSwift
+import RxCocoa
 
 protocol TodoView: AnyObject {
     func insertToDoItem() -> ()
@@ -22,6 +24,8 @@ class ViewController: UIViewController {
     
     var viewModel: ToDoViewModel?
     
+    let disposeBag = DisposeBag()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -29,6 +33,10 @@ class ViewController: UIViewController {
         itemsTableView.register(nib, forCellReuseIdentifier: identifier)
         
         viewModel = ToDoViewModel(todoView: self)
+        
+        viewModel?.items.asObservable().bind(to: itemsTableView.rx.items(cellIdentifier: identifier, cellType: ToDoItemTableViewCell.self)) { index, item, cell in
+            cell.configure(withViewModel: item b )
+        }.disposed(by: disposeBag)
     }
 
     @IBAction func onAddItem(_ sender: UIButton) {
@@ -48,24 +56,24 @@ class ViewController: UIViewController {
 
 extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return viewModel?.items.count ?? 0
+        return viewModel?.items.value.count ?? 0
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: identifier, for: indexPath) as? ToDoItemTableViewCell else { return UITableViewCell() }
-        let itemViewModel = viewModel?.items[indexPath.row]
+        let itemViewModel = viewModel?.items.value[indexPath.row]
         cell.configure(withViewModel: itemViewModel!)
         
         return cell
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let itemViewModel = viewModel?.items[indexPath.row]
+        let itemViewModel = viewModel?.items.value[indexPath.row]
         (itemViewModel as? TodoItemViewDelegate)?.onItemSelected()
     }
     
     func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        let itemViewModel = viewModel?.items[indexPath.row]
+        let itemViewModel = viewModel?.items.value[indexPath.row]
         var menuActions: [UIContextualAction] = []
         _ = itemViewModel?.menuItems?.map { menuItem in
             let menuAction = UIContextualAction(style: .normal, title: menuItem.title!) { (action, sourceView, success: (Bool) -> (Void)) in
@@ -97,7 +105,7 @@ extension ViewController: TodoView {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.itemsTableView.beginUpdates()
-            self.itemsTableView.insertRows(at: [IndexPath(row: items.count-1, section: 0)], with: .automatic)
+            self.itemsTableView.insertRows(at: [IndexPath(row: items.value.count-1, section: 0)], with: .automatic)
             self.itemsTableView.endUpdates()
         }
     }
