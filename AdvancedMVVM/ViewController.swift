@@ -10,7 +10,6 @@ import RxSwift
 import RxCocoa
 
 protocol TodoView: AnyObject {
-    func insertToDoItem() -> ()
     func removeTodoItem(at index: Int) -> ()
     func updateTodoItem(at index: Int) -> ()
     func reloadItems() -> ()
@@ -32,10 +31,10 @@ class ViewController: UIViewController {
         let nib = UINib(nibName: "TodoItemTableViewCell", bundle: nil)
         itemsTableView.register(nib, forCellReuseIdentifier: identifier)
         
-        viewModel = ToDoViewModel(todoView: self)
+        viewModel = ToDoViewModel()
         
         viewModel?.items.asObservable().bind(to: itemsTableView.rx.items(cellIdentifier: identifier, cellType: ToDoItemTableViewCell.self)) { index, item, cell in
-            cell.configure(withViewModel: item b )
+            cell.configure(withViewModel: item)
         }.disposed(by: disposeBag)
     }
 
@@ -54,19 +53,7 @@ class ViewController: UIViewController {
     }
 }
 
-extension ViewController: UITableViewDataSource, UITableViewDelegate {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return viewModel?.items.value.count ?? 0
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: identifier, for: indexPath) as? ToDoItemTableViewCell else { return UITableViewCell() }
-        let itemViewModel = viewModel?.items.value[indexPath.row]
-        cell.configure(withViewModel: itemViewModel!)
-        
-        return cell
-    }
-    
+extension ViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let itemViewModel = viewModel?.items.value[indexPath.row]
         (itemViewModel as? TodoItemViewDelegate)?.onItemSelected()
@@ -92,24 +79,6 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
 }
 
 extension ViewController: TodoView {
-    func insertToDoItem() {
-        guard let items = viewModel?.items else {
-            debugPrint("Items object is empty")
-            
-            return
-        }
-        
-        itemTextField.text = viewModel?.newToDoItem ?? ""
-        
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.itemsTableView.beginUpdates()
-            self.itemsTableView.insertRows(at: [IndexPath(row: items.value.count-1, section: 0)], with: .automatic)
-            self.itemsTableView.endUpdates()
-        }
-    }
-    
     func removeTodoItem(at index: Int) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }

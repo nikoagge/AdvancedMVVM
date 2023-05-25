@@ -110,8 +110,7 @@ class ToDoViewModel: TodoViewPresentable {
     var newToDoItem: String?
     var items: Variable<[ToDoItemPresentable]> = Variable([])
     
-    init(todoView: TodoView) {
-        self.todoView = todoView
+    init() {
         let item1 = ToDoItemViewModel(id: "1", textValue: "Washing Clothes", parentViewModel: self)
         let item2 = ToDoItemViewModel(id: "2", textValue: "Buy Groceries", parentViewModel: self)
         let item3 = ToDoItemViewModel(id: "3", textValue: "Wash car", parentViewModel: self)
@@ -131,11 +130,8 @@ extension ToDoViewModel: TodoViewDelegate {
         let newItemIndex = items.value.count + 1
         let newItem = ToDoItemViewModel(id: "\(newItemIndex)", textValue: newValue, parentViewModel: self)
         items.value.append(newItem)
-        self.todoView?.insertToDoItem()
         
-        newToDoItem = ""
-        
-        todoView?.insertToDoItem()
+        newToDoItem = ""        
     }
     
     func onTodoDelete(for id: String) {
@@ -143,7 +139,6 @@ extension ToDoViewModel: TodoViewDelegate {
             return
         }
         items.value.remove(at: index)
-        self.todoView?.removeTodoItem(at: index)
     }
     
     func onToDoDone(for id: String) {
@@ -169,7 +164,5 @@ extension ToDoViewModel: TodoViewDelegate {
 
             return !(($0.isDone ?? false) && ($1.isDone ?? false))
         })
-
-        todoView?.reloadItems()
     }
 }
