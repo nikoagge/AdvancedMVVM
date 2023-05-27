@@ -8,5 +8,6 @@ target 'AdvancedMVVM' do
   # Pods for AdvancedMVVM
   pod 'RxSwift', '~> 4.0'
   pod 'RxCocoa', '~> 4.0'
+  pod 'RealmSwift'
 
 end

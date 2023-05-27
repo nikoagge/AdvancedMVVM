@@ -6,6 +6,7 @@
 //
 
 import RxSwift
+import RealmSwift
 
 protocol TodoMenuItemViewPresentable {
     var title: String? { get set }
@@ -109,12 +110,89 @@ class ToDoViewModel: TodoViewPresentable {
     weak var todoView: TodoView?
     var newToDoItem: String?
     var items: Variable<[ToDoItemPresentable]> = Variable([])
+    var realmDatabase: RealmDatabase?
+    var notificationToken: NotificationToken? = nil
     
     init() {
-        let item1 = ToDoItemViewModel(id: "1", textValue: "Washing Clothes", parentViewModel: self)
-        let item2 = ToDoItemViewModel(id: "2", textValue: "Buy Groceries", parentViewModel: self)
-        let item3 = ToDoItemViewModel(id: "3", textValue: "Wash car", parentViewModel: self)
-        items.value.append(contentsOf: [item1, item2, item3])
+        realmDatabase = RealmDatabase.shared
+        let todoItemResults = realmDatabase?.fetch()
+        notificationToken = todoItemResults?.observe({ [weak self] (changes: RealmCollectionChange) in
+            guard let self = self else { return }
+            
+            switch changes {
+            case .initial:
+                todoItemResults?.forEach({ todoItemEntity in
+                    let todoItemEntity = todoItemEntity
+                    let newItemIndex = todoItemEntity.todoId
+                    let newValue = todoItemEntity.todoValue
+                    
+                    let newItem = ToDoItemViewModel(id: "\(newItemIndex)", textValue: newValue, parentViewModel: self)
+                    self.items.value.append(newItem)
+                })
+                
+            case .update(_, let deletions, let insertions, let modifications):
+                insertions.forEach { index in
+                    let todoItemEntity = todoItemResults?[index]
+                    
+                    let newItemIndex = todoItemEntity?.todoId
+                    let newValue = todoItemEntity?.todoValue
+                    
+                    let newItem = ToDoItemViewModel(id: "\(newItemIndex)", textValue: newValue, parentViewModel: self)
+                    self.items.value.append(newItem)
+                }
+                
+                modifications.forEach { [weak self] index in
+                    guard let self = self else { return }
+                    let todoItemEntity = todoItemResults?[index]
+                    
+                    guard let index = self.items.value.index(where : { Int($0.id!) == todoItemEntity?.todoId }) else {
+                        return
+                    }
+                    
+                    if todoItemEntity?.deletedAt != nil {
+                        self.items.value.remove(at: index)
+                        realmDatabase?.delete(primaryKey: todoItemEntity?.todoId ?? 0)
+                    } else {
+                        var todoItemViewModel = self.items.value[index]
+                        todoItemViewModel.isDone = todoItemEntity?.isDone
+                        
+                        if var doneMenuItem = todoItemViewModel.menuItems?.filter { (todoMenuItem) -> Bool in
+                            todoMenuItem is DoneMenuItemViewModel
+                        }.first {
+                            doneMenuItem.title = todoItemEntity?.isDone ?? false ? "Undone" : "Done"
+                        }
+                    }
+                    
+                    var todoItemViewModel = self.items.value[index]
+                    
+                    todoItemViewModel.isDone! = ((todoItemEntity?.isDone) != nil)
+                    if var doneMenuItem = todoItemViewModel.menuItems?.filter { (todoMenuItem) -> Bool in
+                        todoMenuItem is DoneMenuItemViewModel
+                    }.first {
+                        doneMenuItem.title = todoItemEntity?.isDone! ? "Undone" : "Done"
+                    }
+                }
+                
+            case .error(let error):
+                break
+            }
+            
+            self.items.value.sort(by: {
+                if !($0.isDone ?? false) && !($1.isDone ?? false) {
+                    return ($0.id ?? "") < ($1.id ?? "")
+                }
+
+                if ($0.isDone ?? false) && ($1.isDone ?? false) {
+                    return ($0.id ?? "") < ($1.id ?? "")
+                }
+
+                return !(($0.isDone ?? false) && ($1.isDone ?? false))
+            })
+        })
+    }
+    
+    deinit {
+        notificationToken?.invalidate()
     }
 }
 
@@ -126,43 +204,15 @@ extension ToDoViewModel: TodoViewDelegate {
             return
         }
         debugPrint("New value received: \(newValue)")
-        
-        let newItemIndex = items.value.count + 1
-        let newItem = ToDoItemViewModel(id: "\(newItemIndex)", textValue: newValue, parentViewModel: self)
-        items.value.append(newItem)
-        
-        newToDoItem = ""        
+        realmDatabase?.createOrUpdate(toDoItemValue: newValue)
+        newToDoItem = ""
     }
     
     func onTodoDelete(for id: String) {
-        guard let index = items.value.index(where : { $0.id! == id }) else {
-            return
-        }
-        items.value.remove(at: index)
+        realmDatabase?.softDelete(primaryKey: Int(id) ?? 0)
     }
     
-    func onToDoDone(for id: String) {
-        guard let index = items.value.index(where : { $0.id! == id }) else {
-            return
-        }
-        var todoItem = items.value[index]
-        todoItem.isDone! = !todoItem.isDone!
-        if var doneMenuItem = todoItem.menuItems?.filter { (todoMenuItem) -> Bool in
-            todoMenuItem is DoneMenuItemViewModel
-        }.first {
-            doneMenuItem.title = todoItem.isDone! ? "Undone" : "Done"
-        }
-
-        items.value.sorted(by: {
-            if !($0.isDone ?? false) && !($1.isDone ?? false) {
-                return ($0.id ?? "") < ($1.id ?? "")
-            }
-
-            if ($0.isDone ?? false) && ($1.isDone ?? false) {
-                return ($0.id ?? "") < ($1.id ?? "")
-            }
-
-            return !(($0.isDone ?? false) && ($1.isDone ?? false))
-        })
+    func onToDoDone(for todoId: String) {
+        realmDatabase?.isDone(primaryKey: Int(todoId) ?? 0)
     }
 }
