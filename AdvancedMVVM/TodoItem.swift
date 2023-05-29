@@ -15,6 +15,15 @@ class TodoItem: Object {
     @objc dynamic var updatedAt: Date?
     @objc dynamic var deletedAt: Date?
     
+    init(todoId: Int, todoValue: String, isDone: Bool, createdAt: Date? = nil, updatedAt: Date? = nil, deletedAt: Date? = nil) {
+        self.todoId = todoId
+        self.todoValue = todoValue
+        self.isDone = isDone
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.deletedAt = deletedAt
+    }
+    
     override static func primaryKey() -> String? {
         return "todoId"
     }

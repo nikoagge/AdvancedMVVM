@@ -15,6 +15,10 @@ class RealmDatabase {
     func createOrUpdate(toDoItemValue: String) -> (Void) {
         let realm = try! Realm()
         var todoId: Int? = 1
+        
+        let isEmpty = realm.objects(TodoItem.self).filter { $0.todoValue.lowercased() == toDoItemValue.lowercased() }.isEmpty
+        
+        if !isEmpty { return }
         if let lastEntity = realm.objects(TodoItem.self).last {
             todoId = lastEntity.todoId + 1
         }

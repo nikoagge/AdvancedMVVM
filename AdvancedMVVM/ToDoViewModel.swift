@@ -7,6 +7,7 @@
 
 import RxSwift
 import RealmSwift
+import SwiftyJSON
 
 protocol TodoMenuItemViewPresentable {
     var title: String? { get set }
@@ -102,7 +103,7 @@ protocol TodoViewDelegate: AnyObject {
     func onToDoDone(for id: String) -> ()
 }
 
-protocol TodoViewPresentable {
+protocol TodoViewPresentable: AnyObject {
     var newToDoItem: String? { get }
 }
 
@@ -114,6 +115,21 @@ class ToDoViewModel: TodoViewPresentable {
     var notificationToken: NotificationToken? = nil
     
     init() {
+        APIService.shared.fetchAllTodos { (data) -> (Void) in
+            debugPrint(data)
+            
+            let todosDict = JSON(data)
+            if let todosArray = todosDict["todos"].array {
+                todosArray.forEach { todoItemDict in
+                    if let itemDict = todoItemDict.dictionary {
+                        if let value = itemDict["value"]?.string {
+                            self.realmDatabase?.createOrUpdate(toDoItemValue: value)
+                        }
+                    }
+                }
+            }
+        }
+        
         realmDatabase = RealmDatabase.shared
         let todoItemResults = realmDatabase?.fetch()
         notificationToken = todoItemResults?.observe({ [weak self] (changes: RealmCollectionChange) in
@@ -144,32 +160,23 @@ class ToDoViewModel: TodoViewPresentable {
                 modifications.forEach { [weak self] index in
                     guard let self = self else { return }
                     let todoItemEntity = todoItemResults?[index]
-                    
+
                     guard let index = self.items.value.index(where : { Int($0.id!) == todoItemEntity?.todoId }) else {
                         return
                     }
                     
                     if todoItemEntity?.deletedAt != nil {
                         self.items.value.remove(at: index)
-                        realmDatabase?.delete(primaryKey: todoItemEntity?.todoId ?? 0)
+                        self.realmDatabase?.delete(primaryKey: todoItemEntity?.todoId ?? 0)
                     } else {
                         var todoItemViewModel = self.items.value[index]
                         todoItemViewModel.isDone = todoItemEntity?.isDone
-                        
+
                         if var doneMenuItem = todoItemViewModel.menuItems?.filter { (todoMenuItem) -> Bool in
                             todoMenuItem is DoneMenuItemViewModel
                         }.first {
                             doneMenuItem.title = todoItemEntity?.isDone ?? false ? "Undone" : "Done"
                         }
-                    }
-                    
-                    var todoItemViewModel = self.items.value[index]
-                    
-                    todoItemViewModel.isDone! = ((todoItemEntity?.isDone) != nil)
-                    if var doneMenuItem = todoItemViewModel.menuItems?.filter { (todoMenuItem) -> Bool in
-                        todoMenuItem is DoneMenuItemViewModel
-                    }.first {
-                        doneMenuItem.title = todoItemEntity?.isDone! ? "Undone" : "Done"
                     }
                 }
                 

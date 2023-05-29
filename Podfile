@@ -9,5 +9,7 @@ target 'AdvancedMVVM' do
   pod 'RxSwift', '~> 4.0'
   pod 'RxCocoa', '~> 4.0'
   pod 'RealmSwift'
+  pod 'Alamofire'
+  pod 'SwiftyJSON'
 
 end
